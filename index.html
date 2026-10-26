@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7c245f">
+<meta name="description" content="ShieldShe Protector — personal safety tools, trusted contacts, check-ins and nearby public facilities.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>ShieldShe Protector</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body>
+<header class="topbar">
+  <div class="brandmark" aria-hidden="true">S</div>
+  <div><div class="brand">ShieldShe <span>Protector</span></div><div class="tagline">Safety tools, wherever you go</div></div>
+  <button id="installBtn" class="install hidden" type="button">Install app</button>
+</header>
+<main>
+  <section class="welcome">
+    <p class="eyebrow">YOUR PERSONAL SAFETY COMPANION</p>
+    <h1>Your safety.<br><span>Your choices.</span></h1>
+    <p class="sub">Quick access to check-ins, a voice-enabled simulated call, and nearby public help.</p>
+    <div class="statusline"><span class="dot"></span><span id="locationStatus">Location not shared</span></div>
+  </section>
+
+  <section class="sos-panel">
+    <div>
+      <p class="eyebrow light">NEED HELP?</p>
+      <h2>Emergency SOS</h2>
+      <p>Prepare a message with your current location for your trusted contacts.</p>
+    </div>
+    <button id="sosBtn" class="sos-button" type="button" aria-label="Prepare emergency SOS message"><span>SOS</span><small>GET HELP</small></button>
+    <p class="fineprint">This prototype does not automatically contact emergency services. If you are in immediate danger in India, call 112 directly.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-heading"><div><p class="eyebrow">QUICK ACTIONS</p><h2>What do you need?</h2></div></div>
+    <div class="action-grid">
+      <article class="action-card">
+        <div class="action-icon pink">☎</div><h3>Voice fake call</h3>
+        <p>Play a simulated incoming call with spoken dialogue.</p>
+        <button id="fakeCallBtn" class="button primary" type="button">Start fake call</button>
+      </article>
+      <article class="action-card">
+        <div class="action-icon purple">⌖</div><h3>Find nearby help</h3>
+        <p>Look for mapped hospitals and police stations near you.</p>
+        <button id="findHelpBtn" class="button secondary" type="button">Find nearby help</button>
+      </article>
+      <article class="action-card">
+        <div class="action-icon teal">✓</div><h3>Safety check-in</h3>
+        <p>Prepare a check-in message for a trusted person.</p>
+        <button id="checkinBtn" class="button secondary" type="button">Check in</button>
+      </article>
+      <article class="action-card">
+        <div class="action-icon gold">➤</div><h3>Open navigation</h3>
+        <p>Open directions in your preferred map service.</p>
+        <button id="navBtn" class="button secondary" type="button">Open maps</button>
+      </article>
+    </div>
+  </section>
+
+  <section class="section two-col">
+    <div class="panel">
+      <p class="eyebrow">YOUR CIRCLE</p><h2>Trusted contacts</h2>
+      <p class="muted">Contacts are saved only in this browser on this device in this prototype.</p>
+      <form id="contactForm" class="contact-form">
+        <label for="contactName">Name</label><input id="contactName" required maxlength="60" placeholder="e.g. Mum">
+        <label for="contactPhone">Phone number</label><input id="contactPhone" required type="tel" inputmode="tel" maxlength="24" placeholder="+91…">
+        <button class="button primary" type="submit">Add trusted contact</button>
+      </form>
+      <div id="contactsList" class="contacts-list"><p class="muted">No contacts added yet.</p></div>
+    </div>
+    <div class="panel">
+      <p class="eyebrow">PLAN AHEAD</p><h2>Risk & route notes</h2>
+      <p class="muted">Choose a self-assessed level to see a practical reminder. This is not a live crime-risk prediction.</p>
+      <label for="riskLevel">Current situation</label>
+      <select id="riskLevel">
+        <option value="low">Low — I feel comfortable</option>
+        <option value="moderate">Moderate — I feel unsure</option>
+        <option value="high">High — I feel unsafe</option>
+      </select>
+      <div id="riskAdvice" class="risk-advice low">
+        <strong>Low risk</strong><p>Stay aware of your surroundings and keep your phone charged. Share your plan if useful.</p>
+      </div>
+      <a id="directionsLink" class="text-link" href="https://www.google.com/maps" target="_blank" rel="noopener">Open Google Maps ↗</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading"><div><p class="eyebrow">NEARBY PUBLIC FACILITIES</p><h2>Help around you</h2></div><span class="map-note">Requires location + internet</span></div>
+    <div id="map" role="region" aria-label="Map showing nearby public facilities"></div>
+    <div id="placesList" class="places-list"><p class="muted">Tap “Find nearby help” to search for mapped police stations and hospitals.</p></div>
+    <p class="fineprint">Map and place data may be incomplete or outdated. Confirm a facility is open and accessible before relying on it. The app does not certify a route or location as safe.</p>
+  </section>
+
+  <section class="section privacy">
+    <h2>Use with care</h2>
+    <p>ShieldShe is a safety-support tool, not an emergency-response service. Location sharing works only after permission. SMS and calls require your device and carrier. Never wait for this app if you need urgent help.</p>
+    <a href="https://112.gov.in/" target="_blank" rel="noopener">India emergency number information ↗</a>
+  </section>
+</main>
+<footer><span>ShieldShe Protector</span><span>Prototype · Public beta</span></footer>
+
+<div id="callOverlay" class="call-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="callTitle">
+  <div class="call-card">
+    <div class="call-wave">♫</div><p class="eyebrow">SIMULATED INCOMING CALL</p>
+    <h2 id="callTitle">Mum is calling…</h2><p id="callSubtitle">Voice simulation is playing on this device.</p>
+    <div class="call-actions"><button id="declineCallBtn" class="decline" type="button">End call</button><button id="answerCallBtn" class="answer" type="button">Answer</button></div>
+    <p class="fineprint">This is a simulation, not a real phone call.</p>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="app.js"></script>
+</body>
+</html>

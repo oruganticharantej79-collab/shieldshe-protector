@@ -1,0 +1,32 @@
+{
+  "id": "./",
+  "name": "ShieldShe Protector",
+  "short_name": "ShieldShe",
+  "description": "Personal safety tools, voice fake call, trusted contacts and nearby public facilities.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fbf5fa",
+  "theme_color": "#7c245f",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
