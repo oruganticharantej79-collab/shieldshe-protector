@@ -273,12 +273,12 @@ testSupabaseConnection();
 
 /* ShieldShe Protector: Login and Registration */
 (function setupShieldSheAuth() {
-  if (!window.supabase || !window.supabaseClient) {
+if (!window.supabase || typeof supabaseClient === "undefined") {
     console.error("Supabase client is not available.");
     return;
   }
 
-  const client = window.supabaseClient;
+  const client = supabaseClient;
 
   const style = document.createElement("style");
   style.textContent = `
