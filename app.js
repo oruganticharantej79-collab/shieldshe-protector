@@ -102,27 +102,71 @@ function smsLink(message, phone) {
 function getLocationLine() {
   return currentPosition ? `My approximate location: https://maps.google.com/?q=${currentPosition.lat},${currentPosition.lon}` : "I could not share my location yet.";
 }
+
 async function prepareSOS() {
-  let p = currentPosition;
-  if (!p) {
-    try { p = await requestLocation(); } catch(e) { toast(e.message + " You can still prepare an SOS message."); }
-  }
-  const message = `SOS — I may need help. Please contact me and check on me. ${getLocationLine()}`;
-  const contacts = getContacts();
-  if (navigator.share) {
-    try { await navigator.share({title:"ShieldShe SOS", text:message}); return; } catch(e) { if (e.name==="AbortError") return; }
-  }
-  if (contacts.length) {
-    const first = contacts[0];
-    if (confirm(`Open SMS to ${first.name} (${first.phone}) with an SOS message? You must review and send it yourself.`)) {
-      window.location.href = smsLink(message, first.phone);
+  const button = $("sosBtn");
+  if (button) button.disabled = true;
+
+  try {
+    if (!currentPosition) {
+      try {
+        await requestLocation();
+      } catch (e) {
+        toast(
+          e.message +
+          " Your SOS message can still be prepared without location."
+        );
+      }
+    }
+
+    const message =
+      `SOS — I may need help. Please contact me and check on me. ${getLocationLine()}`;
+
+    const contacts = getContacts();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "ShieldShe SOS",
+          text: message
+        });
+        return;
+      } catch (e) {
+        if (e.name === "AbortError") return;
+      }
+    }
+
+    if (contacts.length) {
+      const first = contacts[0];
+
+      if (
+        confirm(
+          `Prepare an SOS SMS for ${first.name} (${first.phone})? ` +
+          "Review the message and send it yourself."
+        )
+      ) {
+        window.location.href = smsLink(message, first.phone);
+        return;
+      }
+
       return;
     }
+
+    if (
+      confirm(
+        "No trusted contacts are saved. Open a message with your SOS text? " +
+        "You will need to choose a recipient and send it yourself."
+      )
+    ) {
+      window.location.href = smsLink(message, "");
+    }
+  } catch (e) {
+    toast("Could not prepare the SOS message. Please try again.");
+  } finally {
+    if (button) button.disabled = false;
   }
-  const mailBody = encodeURIComponent(message);
-  window.location.href = `sms:?body=${mailBody}`;
-  toast("Review and send the message yourself. SOS is not sent automatically.");
 }
+
 function playFakeCall() {
   $("callOverlay").classList.remove("hidden");
   $("callSubtitle").textContent = "Incoming call simulation";
