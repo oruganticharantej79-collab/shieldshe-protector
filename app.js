@@ -271,4 +271,194 @@ testSupabaseConnection();
 
 
 
+/* ShieldShe Protector: Login and Registration */
+(function setupShieldSheAuth() {
+  if (!window.supabase || !window.supabaseClient) {
+    console.error("Supabase client is not available.");
+    return;
+  }
+
+  const client = window.supabaseClient;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    #shield-auth {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #fff7fa;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    #shield-auth .auth-card {
+      width: 100%;
+      max-width: 390px;
+      box-sizing: border-box;
+      padding: 28px;
+      border-radius: 20px;
+      background: white;
+      box-shadow: 0 8px 35px #53233a20;
+    }
+    #shield-auth h2 { color: #a51d58; margin-top: 0; }
+    #shield-auth input, #shield-auth button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin: 7px 0;
+      border-radius: 9px;
+      font-size: 15px;
+    }
+    #shield-auth input { border: 1px solid #ccc; }
+    #shield-auth button {
+      border: 0;
+      background: #b42363;
+      color: white;
+      cursor: pointer;
+    }
+    #shield-auth .secondary {
+      background: #f5e5ed;
+      color: #85204d;
+    }
+    #shield-auth #shield-auth-message {
+      overflow-wrap: anywhere;
+      font-size: 14px;
+    }
+  `;
+  document.head.appendChild(style);
+
+  const panel = document.createElement("div");
+  panel.id = "shield-auth";
+  panel.innerHTML = `
+    <div class="auth-card">
+      <h2>ShieldShe Protector</h2>
+      <p>Sign in or create an account to continue.</p>
+      <form id="shield-auth-form">
+        <input id="shield-auth-email" type="email"
+          placeholder="Email address" autocomplete="email" required>
+        <input id="shield-auth-password" type="password"
+          placeholder="Password (at least 8 characters)"
+          autocomplete="current-password" minlength="8" required>
+        <button type="submit" id="shield-auth-submit">Log In</button>
+      </form>
+      <button type="button" class="secondary" id="shield-auth-toggle">
+        Create Account
+      </button>
+      <button type="button" class="secondary" id="shield-auth-reset">
+        Forgot Password?
+      </button>
+      <p id="shield-auth-message" role="status" aria-live="polite"></p>
+      <button type="button" id="shield-auth-logout" hidden>
+        Sign Out
+      </button>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  const form = panel.querySelector("#shield-auth-form");
+  const emailInput = panel.querySelector("#shield-auth-email");
+  const passwordInput = panel.querySelector("#shield-auth-password");
+  const submit = panel.querySelector("#shield-auth-submit");
+  const toggle = panel.querySelector("#shield-auth-toggle");
+  const reset = panel.querySelector("#shield-auth-reset");
+  const message = panel.querySelector("#shield-auth-message");
+  const logout = panel.querySelector("#shield-auth-logout");
+
+  let mode = "login";
+
+  toggle.addEventListener("click", () => {
+    mode = mode === "login" ? "signup" : "login";
+    submit.textContent = mode === "login" ? "Log In" : "Create Account";
+    toggle.textContent = mode === "login" ? "Create Account" : "Back to Log In";
+    passwordInput.autocomplete =
+      mode === "login" ? "current-password" : "new-password";
+    message.textContent = "";
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    message.textContent = "Please wait…";
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    try {
+      const result = mode === "login"
+        ? await client.auth.signInWithPassword({ email, password })
+        : await client.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: window.location.origin +
+                window.location.pathname
+            }
+          });
+
+      if (result.error) throw result.error;
+
+      message.textContent = mode === "signup"
+        ? "Account request submitted. Check your email to confirm registration if required."
+        : "Signed in successfully.";
+
+      if (mode === "login" && result.data.session) {
+        panel.remove();
+        style.remove();
+      }
+    } catch (error) {
+      message.textContent = error.message || "Authentication failed.";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  reset.addEventListener("click", async () => {
+    const email = emailInput.value.trim();
+    if (!email) {
+      message.textContent = "Enter your email address first.";
+      return;
+    }
+
+    try {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
+      if (error) throw error;
+      message.textContent = "If the account exists, password-reset instructions will be emailed.";
+    } catch (error) {
+      message.textContent = error.message || "Could not request password reset.";
+    }
+  });
+
+  logout.addEventListener("click", async () => {
+    const { error } = await client.auth.signOut();
+    if (error) {
+      message.textContent = error.message;
+      return;
+    }
+    window.location.reload();
+  });
+
+  client.auth.onAuthStateChange((event, session) => {
+    if (session && event === "SIGNED_IN") {
+      panel.remove();
+      style.remove();
+    }
+  });
+
+  client.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      message.textContent = error.message;
+      return;
+    }
+    if (data.session) {
+      panel.remove();
+      style.remove();
+    }
+  });
+})();
+
+
+
 
