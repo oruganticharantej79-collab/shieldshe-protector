@@ -237,4 +237,14 @@ const SUPABASE_URL = "https://gngbalmgyxuihqhwdwlz.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_CG23vgMDOEBAQe2xQp5BbA_3xOw1fuS";
 
 
+/* Connect ShieldShe Protector to Supabase */
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+console.log("ShieldShe Protector: Supabase client initialized");
+
+
+
 
