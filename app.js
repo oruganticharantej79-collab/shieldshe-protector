@@ -247,4 +247,28 @@ console.log("ShieldShe Protector: Supabase client initialized");
 
 
 
+/* Test the ShieldShe Supabase database connection */
+async function testSupabaseConnection() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("connection_test")
+      .select("status")
+      .eq("id", 1)
+      .single();
+
+    if (error) {
+      console.error("Supabase database test failed:", error.message);
+      return;
+    }
+
+    console.log("Supabase database test:", data.status);
+  } catch (err) {
+    console.error("Supabase test error:", err);
+  }
+}
+
+testSupabaseConnection();
+
+
+
 
