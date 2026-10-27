@@ -230,3 +230,11 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 }
 renderContacts(); updateRisk(); ensureMap();
+
+
+/* ShieldShe Protector - Supabase setup */
+const SUPABASE_URL = "https://gngbalmgyxuihqhwdwlz.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_CG23vgMDOEBAQe2xQp5BbA_3xOw1fuS";
+
+
+
