@@ -461,4 +461,174 @@ if (!window.supabase || typeof supabaseClient === "undefined") {
 
 
 
+/* ShieldShe Protector - Emergency Contacts */
+(function setupEmergencyContacts() {
+  if (typeof supabaseClient === "undefined") {
+    console.error("Supabase client is not available.");
+    return;
+  }
+
+  const client = supabaseClient;
+
+  function createContactsPanel(user) {
+    let panel = document.getElementById("shield-emergency-contacts");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "shield-emergency-contacts";
+
+      Object.assign(panel.style, {
+        position: "relative",
+        maxWidth: "520px",
+        margin: "24px auto",
+        padding: "20px",
+        background: "#ffffff",
+        color: "#222222",
+        border: "1px solid #dddddd",
+        borderRadius: "14px",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+        fontFamily: "Arial, sans-serif",
+        zIndex: "10"
+      });
+
+      panel.innerHTML = `
+        <h2 style="margin-top:0">Emergency Contacts</h2>
+        <p>Add trusted people you may need help contacting.</p>
+        <form id="shield-contact-form">
+          <label for="shield-contact-name">Contact name</label>
+          <input id="shield-contact-name" required maxlength="100"
+            placeholder="Enter name"
+            style="display:block;box-sizing:border-box;width:100%;padding:10px;margin:6px 0 12px">
+
+          <label for="shield-contact-phone">Phone number</label>
+          <input id="shield-contact-phone" type="tel" required maxlength="20"
+            placeholder="Enter phone number"
+            style="display:block;box-sizing:border-box;width:100%;padding:10px;margin:6px 0 12px">
+
+          <button type="submit" style="padding:10px 16px;cursor:pointer">
+            Save Contact
+          </button>
+        </form>
+        <p id="shield-contact-message" role="status" aria-live="polite"></p>
+        <h3>Saved contacts</h3>
+        <ul id="shield-contact-list"></ul>
+      `;
+
+      document.body.appendChild(panel);
+    }
+
+    const form = document.getElementById("shield-contact-form");
+    const message = document.getElementById("shield-contact-message");
+    const list = document.getElementById("shield-contact-list");
+
+    async function loadContacts() {
+      list.replaceChildren();
+
+      const { data, error } = await client
+        .from("emergency_contacts")
+        .select("id, contact_name, phone_number")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        message.textContent = "Could not load contacts: " + error.message;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        list.textContent = "No contacts saved yet.";
+        return;
+      }
+
+      data.forEach((contact) => {
+        const item = document.createElement("li");
+        item.style.marginBottom = "12px";
+
+        const details = document.createElement("span");
+        details.textContent =
+          contact.contact_name + " — " + contact.phone_number + " ";
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.textContent = "Delete";
+        removeButton.addEventListener("click", async () => {
+          if (!window.confirm("Delete this emergency contact?")) return;
+
+          const { error: deleteError } = await client
+            .from("emergency_contacts")
+            .delete()
+            .eq("id", contact.id)
+            .eq("user_id", user.id);
+
+          if (deleteError) {
+            message.textContent = "Delete failed: " + deleteError.message;
+            return;
+          }
+
+          message.textContent = "Contact deleted.";
+          await loadContacts();
+        });
+
+        item.append(details, removeButton);
+        list.appendChild(item);
+      });
+    }
+
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      message.textContent = "Saving contact…";
+
+      const contactName = document
+        .getElementById("shield-contact-name").value.trim();
+      const phoneNumber = document
+        .getElementById("shield-contact-phone").value.trim();
+
+      if (!contactName || !phoneNumber) {
+        message.textContent = "Enter both the name and phone number.";
+        return;
+      }
+
+      const { error } = await client
+        .from("emergency_contacts")
+        .insert({
+          user_id: user.id,
+          contact_name: contactName,
+          phone_number: phoneNumber
+        });
+
+      if (error) {
+        message.textContent = "Save failed: " + error.message;
+        return;
+      }
+
+      form.reset();
+      message.textContent = "Contact saved successfully.";
+      await loadContacts();
+    };
+
+    loadContacts();
+  }
+
+  async function checkLogin() {
+    const { data, error } = await client.auth.getUser();
+
+    if (error || !data.user) {
+      document.getElementById("shield-emergency-contacts")?.remove();
+      return;
+    }
+
+    createContactsPanel(data.user);
+  }
+
+  checkLogin();
+
+  client.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      setTimeout(() => createContactsPanel(session.user), 0);
+    } else {
+      document.getElementById("shield-emergency-contacts")?.remove();
+    }
+  });
+})();
+
+
+
 
