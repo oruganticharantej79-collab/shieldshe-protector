@@ -625,6 +625,44 @@ if (!window.supabase || typeof supabaseClient === "undefined") {
       setTimeout(() => createContactsPanel(session.user), 0);
     } else {
       document.getElementById("shield-emergency-contacts")?.remove();
+
+      
+/* ShieldShe Protector - Safe SOS backend test */
+async function testShieldSheSOSBackend() {
+  const message = "SOS backend test";
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      alert("Please log in before testing the SOS backend.");
+      return;
+    }
+
+    const { data, error } = await supabaseClient.functions.invoke(
+      "send-sos-alert",
+      {
+        body: { test: true }
+      }
+    );
+
+    if (error) {
+      console.error("SOS backend test failed:", error);
+      alert("Backend test failed. Open the browser console for details.");
+      return;
+    }
+
+    console.log(message, data);
+    alert(data?.message || "Backend response received. No SMS was sent.");
+  } catch (err) {
+    console.error("SOS backend test error:", err);
+    alert("Could not reach the SOS backend. Check the browser console.");
+  }
+}
+
+window.testShieldSheSOSBackend = testShieldSheSOSBackend;
+
     }
   });
 })();
