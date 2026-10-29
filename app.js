@@ -625,8 +625,9 @@ if (!window.supabase || typeof supabaseClient === "undefined") {
       setTimeout(() => createContactsPanel(session.user), 0);
     } else {
       document.getElementById("shield-emergency-contacts")?.remove();
-
-      
+    }
+  });
+})();
 /* ShieldShe Protector - Safe SOS backend test */
 async function testShieldSheSOSBackend() {
   const message = "SOS backend test";
@@ -662,10 +663,6 @@ async function testShieldSheSOSBackend() {
 }
 
 window.testShieldSheSOSBackend = testShieldSheSOSBackend;
-
-    }
-  });
-})();
 
 
 
