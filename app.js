@@ -665,5 +665,133 @@ async function testShieldSheSOSBackend() {
 window.testShieldSheSOSBackend = testShieldSheSOSBackend;
 
 
+/* ShieldShe Protector - Location Demo */
+(() => {
+  if (window.__shieldSheLocationDemo) return;
+  window.__shieldSheLocationDemo = true;
+
+  let watchId = null;
+  let latestCoords = null;
+
+  const panel = document.createElement("section");
+  panel.style.cssText =
+    "max-width:560px;margin:20px auto;padding:18px;border:1px solid #e7b6cd;border-radius:16px;background:#fff7fa;font-family:Arial,sans-serif;color:#35212a;";
+
+  panel.innerHTML = `
+    <h2>Live Location Demo</h2>
+    <p>This demo updates your location on this page. It does not automatically send your location to contacts.</p>
+    <p id="ss-location-status">Location sharing is stopped.</p>
+    <p id="ss-location-time"></p>
+    <button id="ss-location-start" type="button">Start Location</button>
+    <button id="ss-location-share" type="button" disabled>Share Map Link</button>
+    <button id="ss-location-stop" type="button" disabled>Stop Location</button>
+  `;
+
+  document.body.appendChild(panel);
+
+  const status = panel.querySelector("#ss-location-status");
+  const time = panel.querySelector("#ss-location-time");
+  const start = panel.querySelector("#ss-location-start");
+  const share = panel.querySelector("#ss-location-share");
+  const stop = panel.querySelector("#ss-location-stop");
+
+  start.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      status.textContent = "Location is not supported by this browser.";
+      return;
+    }
+
+    if (watchId !== null) return;
+
+    status.textContent = "Waiting for location permission...";
+    watchId = navigator.geolocation.watchPosition(
+      position => {
+        latestCoords = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude
+        };
+
+        status.textContent = "Location updated successfully.";
+        time.textContent =
+          "Last updated: " +
+          new Date(position.timestamp).toLocaleTimeString();
+
+        share.disabled = false;
+        stop.disabled = false;
+        start.disabled = true;
+      },
+      error => {
+        status.textContent =
+          error.code === 1
+            ? "Location permission was denied."
+            : "Could not get location. Check your device settings.";
+
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+
+        watchId = null;
+        start.disabled = false;
+        stop.disabled = true;
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 15000
+      }
+    );
+  });
+
+  share.addEventListener("click", async () => {
+    if (!latestCoords) return;
+
+    const url =
+      `https://maps.google.com/?q=${latestCoords.lat},${latestCoords.lon}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "My current location",
+          text: "Here is my current location:",
+          url
+        });
+      } else if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+        status.textContent =
+          "Map link copied. Send it to your trusted contact yourself.";
+      } else {
+        window.prompt("Copy this map link and share it yourself:", url);
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        status.textContent = "Sharing failed. Please try again.";
+      }
+    }
+  });
+
+  stop.addEventListener("click", () => {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+
+    watchId = null;
+    latestCoords = null;
+    share.disabled = true;
+    stop.disabled = true;
+    start.disabled = false;
+    time.textContent = "";
+    status.textContent = "Location sharing is stopped.";
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+  });
+})();
+
+
+
 
 
