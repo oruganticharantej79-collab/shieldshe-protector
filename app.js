@@ -794,7 +794,7 @@ window.testShieldSheSOSBackend = testShieldSheSOSBackend;
 
 /* ShieldShe Protector - Save current GPS location securely */
 window.saveShieldSheLiveLocation = async function (shareId, position) {
-  if (!window.supabaseClient) {
+  if (!supabaseClient) {
     console.error("Supabase client is not available globally.");
     return { success: false, message: "Supabase is not connected." };
   }
@@ -803,7 +803,7 @@ window.saveShieldSheLiveLocation = async function (shareId, position) {
   const longitude = position.coords.longitude;
 
   const { data, error } =
-    await window.supabaseClient.functions.invoke(
+    await supabaseClient.functions.invoke(
       "update-live-location",
       {
         body: {
