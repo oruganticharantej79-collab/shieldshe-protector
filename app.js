@@ -792,6 +792,41 @@ window.testShieldSheSOSBackend = testShieldSheSOSBackend;
 })();
 
 
+/* ShieldShe Protector - Save current GPS location securely */
+window.saveShieldSheLiveLocation = async function (shareId, position) {
+  if (!window.supabaseClient) {
+    console.error("Supabase client is not available globally.");
+    return { success: false, message: "Supabase is not connected." };
+  }
+
+  const latitude = position.coords.latitude;
+  const longitude = position.coords.longitude;
+
+  const { data, error } =
+    await window.supabaseClient.functions.invoke(
+      "update-live-location",
+      {
+        body: {
+          shareId,
+          latitude,
+          longitude
+        }
+      }
+    );
+
+  if (error || !data?.success) {
+    console.error("Location update failed:", error || data);
+    return {
+      success: false,
+      message: data?.error || "Could not save location."
+    };
+  }
+
+  return { success: true, message: "Location saved securely." };
+};
+
+
+
 
 
 
