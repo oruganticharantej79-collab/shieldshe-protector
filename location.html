@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShieldShe Protector — Shared Location</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 850px;
+      margin: 25px auto;
+      padding: 16px;
+      color: #222;
+    }
+
+    #map {
+      height: 60vh;
+      min-height: 300px;
+      border-radius: 12px;
+    }
+
+    #status {
+      padding: 12px;
+      background: #f2f2f2;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>ShieldShe Protector</h1>
+  <h2>Shared Live Location</h2>
+
+  <p id="status">Checking the private sharing link…</p>
+  <div id="map"></div>
+
+  <p>
+    This page only works while location sharing is active.
+    Anyone with the private link may view the location until it expires
+    or sharing is stopped.
+  </p>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const SUPABASE_URL =
+      "https://gngbalmgyxuihqhwdwlz.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_CG23vgMDOEBAQe2xQp5BbA_3xOw1fuS";
+
+    const token = new URLSearchParams(location.search).get("token");
+    const statusEl = document.getElementById("status");
+
+    let map;
+    let marker;
+    let refreshTimer;
+
+    async function refreshLocation() {
+      try {
+        const response = await fetch(
+          SUPABASE_URL + "/functions/v1/get-shared-location",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_PUBLISHABLE_KEY
+            },
+            body: JSON.stringify({ token })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          statusEl.textContent =
+            data.error || "The link is invalid or has expired.";
+
+          if (refreshTimer) clearInterval(refreshTimer);
+          return;
+        }
+
+        const point = [data.latitude, data.longitude];
+
+        if (!marker) {
+          marker = L.marker(point)
+            .addTo(map)
+            .bindPopup("Shared location");
+        } else {
+          marker.setLatLng(point);
+        }
+
+        map.setView(point, 16);
+
+        statusEl.textContent =
+          "Last update: " +
+          new Date(data.updatedAt).toLocaleString() +
+          ". Expires: " +
+          new Date(data.expiresAt).toLocaleTimeString();
+      } catch (error) {
+        statusEl.textContent =
+          "Unable to load location. Check the internet connection.";
+      }
+    }
+
+    if (!token) {
+      statusEl.textContent = "This link is missing its private token.";
+    } else {
+      map = L.map("map").setView([17.385, 78.4867], 13);
+
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors"
+        }
+      ).addTo(map);
+
+      refreshLocation().then(() => {
+        refreshTimer = setInterval(refreshLocation, 5000);
+      });
+    }
+  </script>
+</body>
+</html>
