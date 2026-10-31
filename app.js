@@ -664,166 +664,235 @@ async function testShieldSheSOSBackend() {
 
 window.testShieldSheSOSBackend = testShieldSheSOSBackend;
 
+/* ShieldShe Protector - Secure live location sharing */
 
-/* ShieldShe Protector - Location Demo */
 (() => {
-  if (window.__shieldSheLocationDemo) return;
-  window.__shieldSheLocationDemo = true;
+  if (window.__shieldSheSecureLocation) return;
+  window.__shieldSheSecureLocation = true;
 
+  let shareId = null;
+  let shareToken = null;
+  let shareLink = null;
   let watchId = null;
-  let latestCoords = null;
 
-  const panel = document.createElement("section");
-  panel.style.cssText =
-    "max-width:560px;margin:20px auto;padding:18px;border:1px solid #e7b6cd;border-radius:16px;background:#fff7fa;font-family:Arial,sans-serif;color:#35212a;";
+  function addPanel() {
+    if (document.getElementById("ssSecureLocationPanel")) return;
 
-  panel.innerHTML = `
-    <h2>Live Location Demo</h2>
-    <p>This demo updates your location on this page. It does not automatically send your location to contacts.</p>
-    <p id="ss-location-status">Location sharing is stopped.</p>
-    <p id="ss-location-time"></p>
-    <button id="ss-location-start" type="button">Start Location</button>
-    <button id="ss-location-share" type="button" disabled>Share Map Link</button>
-    <button id="ss-location-stop" type="button" disabled>Stop Location</button>
-  `;
+    const panel = document.createElement("section");
+    panel.id = "ssSecureLocationPanel";
+    panel.style.cssText =
+      "max-width:560px;margin:20px auto;padding:18px;border:1px solid #e7b6cd;border-radius:16px;background:#fff7fa;font-family:Arial,sans-serif;color:#35212a;";
 
-  document.body.appendChild(panel);
+    panel.innerHTML = `
+      <h2>ShieldShe Live Location</h2>
+      <p>Share your live location with a trusted contact for up to 30 minutes.</p>
+      <button id="ssSecureStart" type="button">Start live sharing</button>
+      <button id="ssSecureStop" type="button" disabled>Stop sharing</button>
+      <p id="ssSecureStatus" role="status">Location sharing is stopped.</p>
+      <p><a id="ssSecureLink" hidden target="_blank" rel="noopener noreferrer">Open location viewer</a></p>
+      <button id="ssSecureSMS" type="button" disabled>Prepare SMS to contact</button>
+      <small>Review the SMS and press Send yourself. Your carrier may charge for SMS.</small>
+    `;
 
-  const status = panel.querySelector("#ss-location-status");
-  const time = panel.querySelector("#ss-location-time");
-  const start = panel.querySelector("#ss-location-start");
-  const share = panel.querySelector("#ss-location-share");
-  const stop = panel.querySelector("#ss-location-stop");
+    document.body.appendChild(panel);
 
-  start.addEventListener("click", () => {
-    if (!navigator.geolocation) {
-      status.textContent = "Location is not supported by this browser.";
-      return;
-    }
-
-    if (watchId !== null) return;
-
-    status.textContent = "Waiting for location permission...";
-    watchId = navigator.geolocation.watchPosition(
-      position => {
-        latestCoords = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
-        };
-
-        status.textContent = "Location updated successfully.";
-        time.textContent =
-          "Last updated: " +
-          new Date(position.timestamp).toLocaleTimeString();
-
-        share.disabled = false;
-        stop.disabled = false;
-        start.disabled = true;
-      },
-      error => {
-        status.textContent =
-          error.code === 1
-            ? "Location permission was denied."
-            : "Could not get location. Check your device settings.";
-
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-
-        watchId = null;
-        start.disabled = false;
-        stop.disabled = true;
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 15000
-      }
-    );
-  });
-
-  share.addEventListener("click", async () => {
-    if (!latestCoords) return;
-
-    const url =
-      `https://maps.google.com/?q=${latestCoords.lat},${latestCoords.lon}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "My current location",
-          text: "Here is my current location:",
-          url
-        });
-      } else if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(url);
-        status.textContent =
-          "Map link copied. Send it to your trusted contact yourself.";
-      } else {
-        window.prompt("Copy this map link and share it yourself:", url);
-      }
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        status.textContent = "Sharing failed. Please try again.";
-      }
-    }
-  });
-
-  stop.addEventListener("click", () => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-    }
-
-    watchId = null;
-    latestCoords = null;
-    share.disabled = true;
-    stop.disabled = true;
-    start.disabled = false;
-    time.textContent = "";
-    status.textContent = "Location sharing is stopped.";
-  });
-
-  window.addEventListener("pagehide", () => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-    }
-  });
-})();
-
-
-/* ShieldShe Protector - Save current GPS location securely */
-window.saveShieldSheLiveLocation = async function (shareId, position) {
-  if (!supabaseClient) {
-    console.error("Supabase client is not available globally.");
-    return { success: false, message: "Supabase is not connected." };
+    document.getElementById("ssSecureStart").addEventListener("click", startSharing);
+    document.getElementById("ssSecureStop").addEventListener("click", stopSharing);
+    document.getElementById("ssSecureSMS").addEventListener("click", prepareSMS);
   }
 
-  const latitude = position.coords.latitude;
-  const longitude = position.coords.longitude;
+  function status(message) {
+    document.getElementById("ssSecureStatus").textContent = message;
+  }
 
-  const { data, error } =
-    await supabaseClient.functions.invoke(
+  async function signedInUser() {
+    if (typeof supabaseClient === "undefined" || !supabaseClient) {
+      throw new Error("Supabase is not initialized.");
+    }
+
+    const { data, error } = await supabaseClient.auth.getUser();
+    if (error || !data.user) {
+      throw new Error("Please sign in before sharing your location.");
+    }
+    return data.user;
+  }
+
+  function getPosition() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Location is not supported by this browser."));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      });
+    });
+  }
+
+  async function startSharing() {
+    const startButton = document.getElementById("ssSecureStart");
+    startButton.disabled = true;
+
+    try {
+      await signedInUser();
+      status("Requesting location permission...");
+
+      const position = await getPosition();
+
+      const { data, error } = await supabaseClient.functions.invoke(
+        "create-location-share",
+        {
+          body: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            durationMinutes: 30
+          }
+        }
+      );
+
+      if (error || !data?.success || !data?.id || !data?.token) {
+        throw new Error(data?.error || error?.message || "Could not create location share.");
+      }
+
+      shareId = data.id;
+      shareToken = data.token;
+      shareLink =
+        window.location.origin +
+        window.location.pathname.replace(/[^/]*$/, "") +
+        "location.html?token=" +
+        encodeURIComponent(shareToken);
+
+      await updatePosition(position);
+
+      watchId = navigator.geolocation.watchPosition(
+        async positionUpdate => {
+          try {
+            await updatePosition(positionUpdate);
+            status("Live location sharing is active. It expires after 30 minutes.");
+          } catch (error) {
+            status(error.message || "Location update failed.");
+          }
+        },
+        error => {
+          status("Location updates unavailable: " + error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 20000
+        }
+      );
+
+      const link = document.getElementById("ssSecureLink");
+      link.href = shareLink;
+      link.hidden = false;
+
+      document.getElementById("ssSecureStop").disabled = false;
+      document.getElementById("ssSecureSMS").disabled = false;
+      status("Live location sharing started. Stop it anytime.");
+    } catch (error) {
+      status(error.message || "Could not start location sharing.");
+    } finally {
+      startButton.disabled = false;
+    }
+  }
+
+  async function updatePosition(position) {
+    const { data, error } = await supabaseClient.functions.invoke(
       "update-live-location",
       {
         body: {
           shareId,
-          latitude,
-          longitude
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
         }
       }
     );
 
-  if (error || !data?.success) {
-    console.error("Location update failed:", error || data);
-    return {
-      success: false,
-      message: data?.error || "Could not save location."
-    };
+    if (error || !data?.success) {
+      throw new Error(data?.error || error?.message || "Location update failed.");
+    }
   }
 
-  return { success: true, message: "Location saved securely." };
-};
+  async function stopSharing() {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+
+    try {
+      if (shareId) {
+        const { data, error } = await supabaseClient.functions.invoke(
+          "stop-location-share",
+          { body: { shareId } }
+        );
+
+        if (error || !data?.success) {
+          throw new Error("Server could not confirm that sharing stopped.");
+        }
+      }
+
+      status("Location sharing stopped.");
+    } catch (error) {
+      status(error.message);
+    }
+
+    shareId = null;
+    shareToken = null;
+    shareLink = null;
+
+    document.getElementById("ssSecureStop").disabled = true;
+    document.getElementById("ssSecureSMS").disabled = true;
+    document.getElementById("ssSecureLink").hidden = true;
+  }
+
+  async function prepareSMS() {
+    if (!shareLink) {
+      status("Start live sharing first.");
+      return;
+    }
+
+    let phone = "";
+
+    try {
+      const { data: authData } = await supabaseClient.auth.getUser();
+
+      if (authData?.user) {
+        const { data } = await supabaseClient
+          .from("emergency_contacts")
+          .select("phone_number, created_at")
+          .eq("user_id", authData.user.id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (data?.length) phone = data[0].phone_number || "";
+      }
+    } catch (error) {
+      console.error("Could not load trusted contact:", error);
+    }
+
+    const message =
+      "ShieldShe Protector: I am sharing my live location with you for up to 30 minutes. Open this private link: " +
+      shareLink;
+
+    window.location.href =
+      "sms:" + encodeURIComponent(phone) + "?body=" + encodeURIComponent(message);
+
+    status("Review the recipient and message in your messaging app, then press Send.");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", addPanel);
+  } else {
+    addPanel();
+  }
+})();
+
+
+
 
 
 
